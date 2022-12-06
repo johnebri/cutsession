@@ -58,7 +58,6 @@ public class UserController {
                 .city(city)
                 .name(name)
                 .build();
-
         Object list = userService.getClients(request);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }
