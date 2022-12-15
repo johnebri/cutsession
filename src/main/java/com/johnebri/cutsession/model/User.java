@@ -1,5 +1,6 @@
 package com.johnebri.cutsession.model;
 
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

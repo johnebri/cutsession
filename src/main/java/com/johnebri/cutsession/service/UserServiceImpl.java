@@ -9,7 +9,7 @@ import com.johnebri.cutsession.dto.register.RegisterUserResponse;
 import com.johnebri.cutsession.dto.signin.SigninRequest;
 import com.johnebri.cutsession.dto.signin.SigninResponse;
 import com.johnebri.cutsession.model.User;
-import com.johnebri.cutsession.model.UserTypeEnum;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -77,6 +77,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public RegisterMerchantResponse registerMerchant(RegisterMerchantRequest request) {
 
+        int strength = 10;
+        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(strength, new SecureRandom());
+
         // generate merchant id
         String merchantId = UUID.randomUUID().toString();
 
@@ -86,7 +89,7 @@ public class UserServiceImpl implements UserService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .username(request.getUsername())
-                .password(request.getPassword())
+                .password(bCryptPasswordEncoder.encode(request.getPassword()))
                 .city(request.getCityOfOperation())
                 .phoneNumber(request.getPhoneNumber())
                 .type(UserTypeEnum.MERCHANT)
@@ -129,10 +132,10 @@ public class UserServiceImpl implements UserService {
 
         List<User> users = userDao.getClients(request);
 
-        if(request.getType().equals(UserTypeEnum.USER.toString())) {
+        if (UserTypeEnum.USER.toString().equalsIgnoreCase(request.getType().toString())) {
             // users
             List<UserResponse> userResponseList = new ArrayList<>();
-            for(User u : users) {
+            for (User u : users) {
                 UserResponse userResponse = UserResponse.builder()
                         .userId(u.getId())
                         .name(u.getName())
@@ -145,10 +148,10 @@ public class UserServiceImpl implements UserService {
             return UserListResponse.builder()
                     .data(userResponseList)
                     .build();
-        } else {
+        } else if (UserTypeEnum.MERCHANT.toString().equalsIgnoreCase(request.getType().toString())) {
             // merchant
             List<MerchantResponse> merchantResponseList = new ArrayList<>();
-            for(User u : users) {
+            for (User u : users) {
                 MerchantResponse userResponse = MerchantResponse.builder()
                         .merchantId(u.getId())
                         .name(u.getName())
@@ -161,7 +164,9 @@ public class UserServiceImpl implements UserService {
             return MerchantListResponse.builder()
                     .data(merchantResponseList)
                     .build();
+        } else {
+            return "No data";
         }
-    }
 
+    }
 }

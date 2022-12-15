@@ -7,7 +7,7 @@ import com.johnebri.cutsession.dto.register.RegisterUserRequest;
 import com.johnebri.cutsession.dto.register.RegisterUserResponse;
 import com.johnebri.cutsession.dto.signin.SigninRequest;
 import com.johnebri.cutsession.dto.signin.SigninResponse;
-import com.johnebri.cutsession.model.UserTypeEnum;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,6 +1,6 @@
 package com.johnebri.cutsession.dto.signin;
 
-import com.johnebri.cutsession.model.UserTypeEnum;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
