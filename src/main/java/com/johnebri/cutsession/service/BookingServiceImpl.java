@@ -2,11 +2,15 @@ package com.johnebri.cutsession.service;
 
 import com.johnebri.cutsession.dao.BookingDao;
 import com.johnebri.cutsession.dao.StudioSessionDao;
+import com.johnebri.cutsession.dao.UserDao;
 import com.johnebri.cutsession.dto.bookings.CreateBookingRequest;
 import com.johnebri.cutsession.dto.bookings.CreateBookingResponse;
 import com.johnebri.cutsession.dto.bookings.RetrieveSessionBookingsRequest;
+import com.johnebri.cutsession.exception.DuplicateResourceException;
+import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.Booking;
 import com.johnebri.cutsession.model.StudioSession;
+import com.johnebri.cutsession.model.User;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +25,12 @@ public class BookingServiceImpl implements BookingService{
 
     private final BookingDao bookingDao;
     private final StudioSessionDao studioSessionDao;
+    private final UserDao userDao;
 
-    public BookingServiceImpl(BookingDao bookingDao, StudioSessionDao studioSessionDao) {
+    public BookingServiceImpl(BookingDao bookingDao, StudioSessionDao studioSessionDao, UserDao userDao) {
         this.bookingDao = bookingDao;
         this.studioSessionDao = studioSessionDao;
+        this.userDao = userDao;
     }
 
     @Override
@@ -32,11 +38,21 @@ public class BookingServiceImpl implements BookingService{
 
         // check if session exists and get the session
         Optional<StudioSession> optionalStudioSession = studioSessionDao.findBySessionId(request.getSessionId());
-
-        System.out.println(optionalStudioSession.get());
-
         if(!optionalStudioSession.isPresent()) {
-            throw new Exception("Studio session not found");
+            throw new ResourceNotFoundException("Studio session not found");
+        }
+
+        // check if user id exists
+        Optional<User> optionalUser = userDao.findUserByUserId(request.getUserId());
+        if(!optionalUser.isPresent()) {
+            throw new ResourceNotFoundException("User not found : " + request.getUserId());
+        }
+
+        // check if session is already booked
+        // check if session id and date exists in bookings
+        Optional<Booking> optionalBooking = bookingDao.checkForDuplicateBooking(request.getSessionId(), request.getDate());
+        if(optionalBooking.isPresent()) {
+            throw new DuplicateResourceException("Session is already booked");
         }
 
         StudioSession studioSesion = optionalStudioSession.get();

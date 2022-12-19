@@ -2,6 +2,7 @@ package com.johnebri.cutsession.dao;
 
 import com.johnebri.cutsession.dto.clients.GetClientRequest;
 import com.johnebri.cutsession.model.User;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,6 +28,7 @@ public class UserDao implements DAO<User> {
     }
 
     RowMapper<User> rowMapper = (rs, rowNum) -> {
+
         User user = new User();
         user.setId(rs.getString("id"));
         user.setName(rs.getString("name"));
@@ -36,6 +38,7 @@ public class UserDao implements DAO<User> {
         user.setDob(rs.getString("dob"));
         user.setCity(rs.getString("city"));
         user.setPhoneNumber(rs.getString("phone_number"));
+        user.setType(UserTypeEnum.valueOf(rs.getString("type")));
         return user;
     };
 
@@ -112,5 +115,54 @@ public class UserDao implements DAO<User> {
         }
         return Optional.ofNullable(user);
     }
+
+    // find by name
+    public Optional<User> findByName(String name) {
+        String sql = "SELECT * FROM users WHERE name = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{name}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + name);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by email
+    public Optional<User> findByEmail(String email) {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{email}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + email);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by phone number
+    public Optional<User> findByPhone(String phone) {
+        String sql = "SELECT * FROM users WHERE phone = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{phone}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + phone);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by phone number
+    public Optional<User> findUserByUserId(String userId) {
+        String sql = "SELECT * FROM users WHERE id = ? AND type = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{userId, "USER"}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + userId);
+        }
+        return Optional.ofNullable(user);
+    }
+
 
 }

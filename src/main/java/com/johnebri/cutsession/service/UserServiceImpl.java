@@ -8,6 +8,8 @@ import com.johnebri.cutsession.dto.register.RegisterUserRequest;
 import com.johnebri.cutsession.dto.register.RegisterUserResponse;
 import com.johnebri.cutsession.dto.signin.SigninRequest;
 import com.johnebri.cutsession.dto.signin.SigninResponse;
+import com.johnebri.cutsession.exception.DuplicateResourceException;
+import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.User;
 import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.security.JwtUtil;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -47,6 +50,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RegisterUserResponse register(RegisterUserRequest request) {
+
+        // check if name already exists
+        if(userDao.findByName(request.getName()).isPresent()) {
+            throw new DuplicateResourceException("Name already exists");
+        }
+
+        // check if email already exists
+        if(userDao.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("Email already exists");
+        }
+
+        // check if username already exists
+        if(userDao.findByUsername(request.getUsername()).isPresent()) {
+            throw new DuplicateResourceException("Username already exists");
+        }
+
+        // check if phone number already exists
+        if(userDao.findByPhone(request.getPhoneNumber()).isPresent()) {
+            throw new DuplicateResourceException("Phone number already exists");
+        }
 
         int strength = 10;
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(strength, new SecureRandom());
@@ -76,6 +99,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RegisterMerchantResponse registerMerchant(RegisterMerchantRequest request) {
+
+        // check if name already exists
+        if(userDao.findByName(request.getName()).isPresent()) {
+            throw new DuplicateResourceException("Name already exists");
+        }
+
+        // check if email already exists
+        if(userDao.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("Email already exists");
+        }
+
+        // check if username already exists
+        if(userDao.findByUsername(request.getUsername()).isPresent()) {
+            throw new DuplicateResourceException("Username already exists");
+        }
+
+        // check if phone number already exists
+        if(userDao.findByPhone(request.getPhoneNumber()).isPresent()) {
+            throw new DuplicateResourceException("Phone number already exists");
+        }
 
         int strength = 10;
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(strength, new SecureRandom());
@@ -119,12 +162,27 @@ public class UserServiceImpl implements UserService {
 
         final String jwt = jwtUtil.generateToken(userDetails);
 
-        SigninResponse response = SigninResponse.builder()
-                .token(jwt)
-                .build();
+        // get the user details
+        Optional<User> optionalUser = userDao.findByUsername(request.getUsername());
+
+        // check accessType mismatch
+        if(!request.getAccessType().toString().equalsIgnoreCase(optionalUser.get().getType().toString())) {
+            throw new ResourceNotFoundException("Access type mismatch");
+        }
+
+        SigninResponse response = new SigninResponse();
+
+        if("USER".equalsIgnoreCase(request.getAccessType().toString())) {
+            // user signin
+            response.setToken(jwt);
+            response.setUserId(optionalUser.get().getId());
+        } else {
+            // merchant signin
+            response.setToken(jwt);
+            response.setMerchantId(optionalUser.get().getId());
+        }
+
         return response;
-
-
     }
 
     @Override

@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotBlank;
+
 /**
  * @author John on 12/6/22
  */
@@ -15,7 +17,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class CreateStudioSessionRequest {
+    @NotBlank(message = "Start time is required")
     private String startsAt;
+
+    @NotBlank(message = "End time is required")
     private String endsAt;
+
+    @NotBlank(message = "Type is required")
     private String type;
 }

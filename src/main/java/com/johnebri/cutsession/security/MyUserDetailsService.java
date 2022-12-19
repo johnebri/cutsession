@@ -1,6 +1,7 @@
 package com.johnebri.cutsession.security;
 
 import com.johnebri.cutsession.dao.UserDao;
+import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,7 +28,7 @@ public class MyUserDetailsService implements UserDetailsService {
         Optional<User> user = userDao.findByUsername(username);
         if(!user.isPresent()) {
             try {
-                throw new Exception("User not found");
+                throw new ResourceNotFoundException("User not found");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

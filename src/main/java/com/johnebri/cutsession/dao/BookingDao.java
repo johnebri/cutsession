@@ -3,10 +3,12 @@ package com.johnebri.cutsession.dao;
 import com.johnebri.cutsession.dto.bookings.RetrieveSessionBookingsRequest;
 import com.johnebri.cutsession.model.Booking;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,14 +70,58 @@ public class BookingDao implements DAO<Booking>{
     }
 
     public List<Booking> retrieveSessionBookings(RetrieveSessionBookingsRequest request) {
+
         StringBuilder sb = new StringBuilder();
-        String sql =
-                "SELECT b.booking_id, b.booking_ref, b.user_id, b.session_id, b.date, b.starts_at, b.ends_at, b.notes, b.title, b.notes " +
+        List<Object> paramsList = new ArrayList<>();
+
+        sb.append("SELECT b.booking_id, b.booking_ref, b.user_id, b.session_id, b.date, b.starts_at, b.ends_at, b.notes, b.title, b.notes " +
                         "FROM bookings b " +
                         "INNER JOIN studio_sessions ss " +
                         "ON b.session_id = ss.id " +
                         "INNER JOIN users u " +
-                        "ON ss.merchant_id = u.id WHERE u.city = 'lagos' LIMIT 50";
-        return jdbcTemplate.query(sql, rowMapper);
+                        "ON ss.merchant_id = u.id");
+
+        sb.append("  WHERE u.city = ?");
+        paramsList.add(request.getCity());
+
+        if(request.getMerchant() != null) {
+            sb.append(" AND ss.merchant_id = ?");
+            paramsList.add(request.getMerchant());
+        }
+
+        if(request.getPeriod() != null) {
+            // split period into start and end dates
+            String[] dates = request.getPeriod().split(":");
+            String startDate = dates[0];
+            String endDate = dates[1];
+
+            sb.append(" AND b.date >= ? AND b.date <= ?");
+            paramsList.add(startDate);
+            paramsList.add(endDate);
+        }
+
+        sb.append(" LIMIT ?");
+        paramsList.add(request.getLimit());
+
+        String sql = sb.toString();
+
+        Object[] params = new Object[paramsList.size()];
+        for(int x = 0; x<paramsList.size(); x++) {
+            params[x] = paramsList.get(x);
+        }
+
+        List<Booking> bookings = jdbcTemplate.query(sql, params, rowMapper);
+        return bookings;
+    }
+
+    public Optional<Booking> checkForDuplicateBooking(String sessionId, String date) {
+        String sql = "SELECT * FROM bookings WHERE session_id = ? AND date = ?";
+        Booking booking = null;
+        try {
+            booking = jdbcTemplate.queryForObject(sql, new Object[]{sessionId, date}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("an error occurred: " + ex.getMessage());
+        }
+        return Optional.ofNullable(booking);
     }
 }

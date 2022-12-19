@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 /**
  * @author John on 12/6/22
  */
@@ -22,7 +24,7 @@ public class SessionsController {
     }
 
     @PostMapping("/studios/{merchantId}")
-    public ResponseEntity<Object> createStudioSession(@PathVariable String merchantId, @RequestBody CreateStudioSessionRequest request) {
+    public ResponseEntity<Object> createStudioSession(@PathVariable String merchantId, @Valid @RequestBody CreateStudioSessionRequest request) throws Exception {
         return new ResponseEntity<>(sessionsService.createStudioSession(merchantId, request), HttpStatus.OK);
     }
 

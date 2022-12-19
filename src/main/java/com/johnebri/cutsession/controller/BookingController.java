@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 /**
  * @author John on 12/7/22
  */
@@ -22,14 +24,14 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<CreateBookingResponse> bookSession(@RequestBody CreateBookingRequest request) throws Exception {
+    public ResponseEntity<CreateBookingResponse> bookSession(@Valid @RequestBody CreateBookingRequest request) throws Exception {
         return new ResponseEntity<>(bookingService.createBooking(request), HttpStatus.OK);
     }
 
     @GetMapping
     public ResponseEntity<Object> retrieveSessionBookings(
             @RequestParam(required = true) String city,
-            @RequestParam(required = true) int limit,
+            @RequestParam(required = true, defaultValue = "20") int limit,
             @RequestParam(required = true) int offset,
             @RequestParam(required = false) String merchant,
             @RequestParam(required = false) String period) {
