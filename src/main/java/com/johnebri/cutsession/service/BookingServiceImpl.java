@@ -11,6 +11,9 @@ import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.Booking;
 import com.johnebri.cutsession.model.StudioSession;
 import com.johnebri.cutsession.model.User;
+import com.johnebri.cutsession.service.bookingref.BookingRefStrategy;
+import com.johnebri.cutsession.service.bookingref.DerivedStrategy;
+import com.johnebri.cutsession.service.bookingref.RandomStrategy;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +64,8 @@ public class BookingServiceImpl implements BookingService{
         String bookingId = UUID.randomUUID().toString();
 
         // generate booking ref
-        String bookingRef = RandomStringUtils.random(9, true, true);
+        String bookingRef = generateBookingRef(new DerivedStrategy(), request);
+
 
         Booking booking = Booking.builder()
                 .bookingId(bookingId)
@@ -80,6 +84,10 @@ public class BookingServiceImpl implements BookingService{
                 .bookingId(bookingId)
                 .bookingRef(bookingRef)
                 .build();
+    }
+
+    private String generateBookingRef(BookingRefStrategy strategy, CreateBookingRequest data) {
+        return strategy.generateBookingRef(data);
     }
 
     @Override
