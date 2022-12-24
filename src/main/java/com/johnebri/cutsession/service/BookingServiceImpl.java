@@ -13,8 +13,6 @@ import com.johnebri.cutsession.model.StudioSession;
 import com.johnebri.cutsession.model.User;
 import com.johnebri.cutsession.service.bookingref.BookingRefStrategy;
 import com.johnebri.cutsession.service.bookingref.DerivedStrategy;
-import com.johnebri.cutsession.service.bookingref.RandomStrategy;
-import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
