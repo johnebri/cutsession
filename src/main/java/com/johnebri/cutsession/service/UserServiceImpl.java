@@ -14,6 +14,7 @@ import com.johnebri.cutsession.model.User;
 import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,6 +41,9 @@ public class UserServiceImpl implements UserService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
+
+    @Value("${base-url}")
+    private String baseUrl;
 
     public UserServiceImpl(UserDao userDao, AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtUtil jwtUtil) {
         this.userDao = userDao;
@@ -188,12 +192,59 @@ public class UserServiceImpl implements UserService {
     @Override
     public Object getClients(GetClientRequest request) {
 
-        List<User> users = userDao.getClients(request);
+        GetClientsDaoResponse users = userDao.getClients(request);
+        int filteredCount = users.getFilterdResponse().size();
+        int totalCount = users.getTotalResponse().size();
+
+        int limit = request.getLimit();
+        int offset = request.getOffset();
+
+        double pages = Math.ceil((float)totalCount/limit);
+
+        int previousOffset = offset - limit;
+        int nextOffset = offset + limit;
+
+        String next = null;
+        String previous = null;
+
+        // check for params
+        String type = request.getType().toString();
+
+        String cityParamValue = "";
+        if(request.getCity() != null) {
+            cityParamValue = "&city="+request.getCity();
+        } else {
+            cityParamValue = "";
+        }
+
+        String nameParamValue = "";
+        if(request.getName() != null) {
+            nameParamValue = "&name="+request.getName();
+        } else {
+            nameParamValue = "";
+        }
+
+        boolean prevBool = true;
+        boolean nextBool = true;
+        if(nextOffset >= totalCount){
+            nextBool = false;
+        }
+
+        if(previousOffset < 0) {
+            prevBool = false;
+        }
+
+        if(nextBool == true)
+            next = baseUrl + "/clients?limit="+limit+"&offset="+nextOffset+"&type="+type+cityParamValue+nameParamValue;
+
+        if(prevBool == true)
+            previous = baseUrl + "/clients?limit="+limit+"&offset="+previousOffset+"&type="+type+cityParamValue+nameParamValue;
+
 
         if (UserTypeEnum.USER.toString().equalsIgnoreCase(request.getType().toString())) {
             // users
             List<UserResponse> userResponseList = new ArrayList<>();
-            for (User u : users) {
+            for (User u : users.getFilterdResponse()) {
                 UserResponse userResponse = UserResponse.builder()
                         .userId(u.getId())
                         .name(u.getName())
@@ -203,13 +254,18 @@ public class UserServiceImpl implements UserService {
                         .build();
                 userResponseList.add(userResponse);
             }
-            return UserListResponse.builder()
-                    .data(userResponseList)
-                    .build();
+
+            UserListResponse resp = new UserListResponse();
+            resp.setCount(totalCount);
+            resp.setNext(next);
+            resp.setPrevious(previous);
+            resp.setData(userResponseList);
+            return resp;
+
         } else if (UserTypeEnum.MERCHANT.toString().equalsIgnoreCase(request.getType().toString())) {
             // merchant
             List<MerchantResponse> merchantResponseList = new ArrayList<>();
-            for (User u : users) {
+            for (User u : users.getFilterdResponse()) {
                 MerchantResponse userResponse = MerchantResponse.builder()
                         .merchantId(u.getId())
                         .name(u.getName())
@@ -219,9 +275,13 @@ public class UserServiceImpl implements UserService {
                         .build();
                 merchantResponseList.add(userResponse);
             }
-            return MerchantListResponse.builder()
-                    .data(merchantResponseList)
-                    .build();
+
+            MerchantListResponse resp = new MerchantListResponse();
+            resp.setCount(totalCount);
+            resp.setData(merchantResponseList);
+            return resp;
+
+
         } else {
             return "No data";
         }

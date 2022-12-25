@@ -1,6 +1,7 @@
 package com.johnebri.cutsession.dao;
 
 import com.johnebri.cutsession.dto.clients.GetClientRequest;
+import com.johnebri.cutsession.dto.clients.GetClientsDaoResponse;
 import com.johnebri.cutsession.model.User;
 import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +49,7 @@ public class UserDao implements DAO<User> {
         return jdbcTemplate.query(sql, rowMapper);
     }
 
-    public List<User> getClients(GetClientRequest request) {
+    public GetClientsDaoResponse getClients(GetClientRequest request) {
 
         StringBuilder sb = new StringBuilder();
         List<Object> paramsList = new ArrayList<>();
@@ -66,19 +67,36 @@ public class UserDao implements DAO<User> {
             paramsList.add(request.getName());
         }
 
+
+
+
+        String sql1 = sb.toString();
+        Object[] params1 = new Object[paramsList.size()];
+        for(int x=0; x<paramsList.size(); x++) {
+            params1[x] = paramsList.get(x);
+        }
+        List<User> users1 = jdbcTemplate.query(sql1,  params1, rowMapper);
+
+
         sb.append(" LIMIT ?");
+        paramsList.add(request.getOffset());
+
+        sb.append(", ?");
         paramsList.add(request.getLimit());
 
-        String sql = sb.toString();
-
-        Object[] params = new Object[paramsList.size()];
+        String sql2 = sb.toString();
+        Object[] params2 = new Object[paramsList.size()];
         for(int x=0; x<paramsList.size(); x++) {
-            params[x] = paramsList.get(x);
+            params2[x] = paramsList.get(x);
         }
+        List<User> users = jdbcTemplate.query(sql2,  params2, rowMapper);
 
-        List<User> users = jdbcTemplate.query(sql,  params, rowMapper);
+        GetClientsDaoResponse getClientsDaoResponse = GetClientsDaoResponse.builder()
+                .filterdResponse(users)
+                .totalResponse(users1)
+                .build();
 
-        return users;
+        return getClientsDaoResponse;
     }
 
     @Override
