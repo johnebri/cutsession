@@ -3,9 +3,7 @@ package com.johnebri.cutsession.service;
 import com.johnebri.cutsession.dao.BookingDao;
 import com.johnebri.cutsession.dao.StudioSessionDao;
 import com.johnebri.cutsession.dao.UserDao;
-import com.johnebri.cutsession.dto.bookings.CreateBookingRequest;
-import com.johnebri.cutsession.dto.bookings.CreateBookingResponse;
-import com.johnebri.cutsession.dto.bookings.RetrieveSessionBookingsRequest;
+import com.johnebri.cutsession.dto.bookings.*;
 import com.johnebri.cutsession.exception.DuplicateResourceException;
 import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.Booking;
@@ -13,6 +11,7 @@ import com.johnebri.cutsession.model.StudioSession;
 import com.johnebri.cutsession.model.User;
 import com.johnebri.cutsession.service.bookingref.BookingRefStrategy;
 import com.johnebri.cutsession.service.bookingref.DerivedStrategy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -27,6 +26,9 @@ public class BookingServiceImpl implements BookingService{
     private final BookingDao bookingDao;
     private final StudioSessionDao studioSessionDao;
     private final UserDao userDao;
+
+    @Value("${base-url}")
+    private String baseUrl;
 
     public BookingServiceImpl(BookingDao bookingDao, StudioSessionDao studioSessionDao, UserDao userDao) {
         this.bookingDao = bookingDao;
@@ -90,6 +92,56 @@ public class BookingServiceImpl implements BookingService{
 
     @Override
     public Object retrieveSessionBookings(RetrieveSessionBookingsRequest request) {
-        return bookingDao.retrieveSessionBookings(request);
+
+        int limit = request.getLimit();
+        int offset = request.getOffset();
+
+        int previousOffset = offset - limit;
+        int nextOffset = offset + limit;
+
+        String next = null;
+        String previous = null;
+
+        RetrieveSessionBookingsDaoResponse daoResponse = bookingDao.retrieveSessionBookings(request);
+
+        int totalCount = daoResponse.getTotalResponse().size();
+        int filteredCount = daoResponse.getFilteredResponse().size();
+
+        boolean prevBool = true;
+        boolean nextBool = true;
+        if(nextOffset >= totalCount){
+            nextBool = false;
+        }
+
+        if(previousOffset < 0) {
+            prevBool = false;
+        }
+
+        // check for params
+        String city = request.getCity();
+
+        String merchantParam = "";
+        if(request.getMerchant() != null) {
+            merchantParam = "&merchant="+request.getMerchant();
+        }
+
+        String periodParam = "";
+        if(request.getPeriod() != null) {
+            periodParam = "&period="+request.getPeriod();
+        }
+
+        if(nextBool == true)
+            next = baseUrl + "/bookings?city="+city+"&limit="+limit+"&offset="+nextOffset+merchantParam+periodParam;
+
+        if(prevBool == true)
+            previous = baseUrl + "/bookings?city="+city+"&limit="+limit+"&offset="+previousOffset+merchantParam+periodParam;
+
+        RetrieveSessionBookingsResponse response = RetrieveSessionBookingsResponse.builder()
+                .count(daoResponse.getTotalResponse().size())
+                .next(next)
+                .previous(previous)
+                .data(daoResponse.getFilteredResponse())
+                .build();
+        return response;
     }
 }

@@ -1,5 +1,6 @@
 package com.johnebri.cutsession.dao;
 
+import com.johnebri.cutsession.dto.bookings.RetrieveSessionBookingsDaoResponse;
 import com.johnebri.cutsession.dto.bookings.RetrieveSessionBookingsRequest;
 import com.johnebri.cutsession.model.Booking;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +70,7 @@ public class BookingDao implements DAO<Booking>{
 
     }
 
-    public List<Booking> retrieveSessionBookings(RetrieveSessionBookingsRequest request) {
+    public RetrieveSessionBookingsDaoResponse retrieveSessionBookings(RetrieveSessionBookingsRequest request) {
 
         StringBuilder sb = new StringBuilder();
         List<Object> paramsList = new ArrayList<>();
@@ -100,18 +101,35 @@ public class BookingDao implements DAO<Booking>{
             paramsList.add(endDate);
         }
 
+        // compute total response
+        String sql1 = sb.toString();
+        Object[] params1 = new Object[paramsList.size()];
+        for(int x = 0; x<paramsList.size(); x++) {
+            params1[x] = paramsList.get(x);
+        }
+        List<Booking> bookings1 = jdbcTemplate.query(sql1, params1, rowMapper);
+
+
+        // compute filtered response
         sb.append(" LIMIT ?");
+        paramsList.add(request.getOffset());
+
+        sb.append(", ?");
         paramsList.add(request.getLimit());
 
         String sql = sb.toString();
-
         Object[] params = new Object[paramsList.size()];
         for(int x = 0; x<paramsList.size(); x++) {
             params[x] = paramsList.get(x);
         }
-
         List<Booking> bookings = jdbcTemplate.query(sql, params, rowMapper);
-        return bookings;
+
+        RetrieveSessionBookingsDaoResponse response = RetrieveSessionBookingsDaoResponse.builder()
+                .filteredResponse(bookings)
+                .totalResponse(bookings1)
+                .build();
+
+        return response;
     }
 
     public Optional<Booking> checkForDuplicateBooking(String sessionId, String date) {
