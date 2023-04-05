@@ -1,15 +1,15 @@
 package com.johnebri.cutsession.dao;
 
 import com.johnebri.cutsession.dto.clients.GetClientRequest;
+import com.johnebri.cutsession.dto.clients.GetClientsDaoResponse;
 import com.johnebri.cutsession.model.User;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
-import java.sql.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +29,7 @@ public class UserDao implements DAO<User> {
     }
 
     RowMapper<User> rowMapper = (rs, rowNum) -> {
+
         User user = new User();
         user.setId(rs.getString("id"));
         user.setName(rs.getString("name"));
@@ -38,6 +39,7 @@ public class UserDao implements DAO<User> {
         user.setDob(rs.getString("dob"));
         user.setCity(rs.getString("city"));
         user.setPhoneNumber(rs.getString("phone_number"));
+        user.setType(UserTypeEnum.valueOf(rs.getString("type")));
         return user;
     };
 
@@ -47,7 +49,7 @@ public class UserDao implements DAO<User> {
         return jdbcTemplate.query(sql, rowMapper);
     }
 
-    public List<User> getClients(GetClientRequest request) {
+    public GetClientsDaoResponse getClients(GetClientRequest request) {
 
         StringBuilder sb = new StringBuilder();
         List<Object> paramsList = new ArrayList<>();
@@ -65,19 +67,36 @@ public class UserDao implements DAO<User> {
             paramsList.add(request.getName());
         }
 
+
+
+
+        String sql1 = sb.toString();
+        Object[] params1 = new Object[paramsList.size()];
+        for(int x=0; x<paramsList.size(); x++) {
+            params1[x] = paramsList.get(x);
+        }
+        List<User> users1 = jdbcTemplate.query(sql1,  params1, rowMapper);
+
+
         sb.append(" LIMIT ?");
+        paramsList.add(request.getOffset());
+
+        sb.append(", ?");
         paramsList.add(request.getLimit());
 
-        String sql = sb.toString();
-
-        Object[] params = new Object[paramsList.size()];
+        String sql2 = sb.toString();
+        Object[] params2 = new Object[paramsList.size()];
         for(int x=0; x<paramsList.size(); x++) {
-            params[x] = paramsList.get(x);
+            params2[x] = paramsList.get(x);
         }
+        List<User> users = jdbcTemplate.query(sql2,  params2, rowMapper);
 
-        List<User> users = jdbcTemplate.query(sql,  params, rowMapper);
+        GetClientsDaoResponse getClientsDaoResponse = GetClientsDaoResponse.builder()
+                .filterdResponse(users)
+                .totalResponse(users1)
+                .build();
 
-        return users;
+        return getClientsDaoResponse;
     }
 
     @Override
@@ -114,5 +133,54 @@ public class UserDao implements DAO<User> {
         }
         return Optional.ofNullable(user);
     }
+
+    // find by name
+    public Optional<User> findByName(String name) {
+        String sql = "SELECT * FROM users WHERE name = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{name}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + name);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by email
+    public Optional<User> findByEmail(String email) {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{email}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + email);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by phone number
+    public Optional<User> findByPhone(String phone) {
+        String sql = "SELECT * FROM users WHERE phone = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{phone}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + phone);
+        }
+        return Optional.ofNullable(user);
+    }
+
+    // find by phone number
+    public Optional<User> findUserByUserId(String userId) {
+        String sql = "SELECT * FROM users WHERE id = ? AND type = ?";
+        User user = null;
+        try {
+            user = jdbcTemplate.queryForObject(sql, new Object[]{userId, "USER"}, rowMapper);
+        } catch (DataAccessException ex) {
+            log.error("user not found : " + userId);
+        }
+        return Optional.ofNullable(user);
+    }
+
 
 }

@@ -15,4 +15,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class SigninResponse {
     private String token;
+    private String userId;
+    private String merchantId;
 }

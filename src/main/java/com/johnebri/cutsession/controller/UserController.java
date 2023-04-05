@@ -7,11 +7,13 @@ import com.johnebri.cutsession.dto.register.RegisterUserRequest;
 import com.johnebri.cutsession.dto.register.RegisterUserResponse;
 import com.johnebri.cutsession.dto.signin.SigninRequest;
 import com.johnebri.cutsession.dto.signin.SigninResponse;
-import com.johnebri.cutsession.model.UserTypeEnum;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 /**
  * @author John on 11/29/22
@@ -28,26 +30,26 @@ public class UserController {
     }
 
     @PostMapping("/register/users")
-    public ResponseEntity<RegisterUserResponse> registerUsers(@RequestBody RegisterUserRequest request) {
+    public ResponseEntity<RegisterUserResponse> registerUsers(@Valid @RequestBody RegisterUserRequest request) {
         RegisterUserResponse response = userService.register(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/register/merchants")
-    public ResponseEntity<RegisterMerchantResponse> registerMerchants(@RequestBody RegisterMerchantRequest request) {
+    public ResponseEntity<RegisterMerchantResponse> registerMerchants(@Valid @RequestBody RegisterMerchantRequest request) {
         RegisterMerchantResponse response = userService.registerMerchant(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/sign-in")
-    public ResponseEntity<SigninResponse> signIn(@RequestBody SigninRequest request) throws Exception {
+    public ResponseEntity<SigninResponse> signIn(@Valid @RequestBody SigninRequest request) throws Exception {
         SigninResponse response = userService.signin(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/clients")
-    public ResponseEntity<Object> clients(@RequestParam(required = false) int limit,
-                                          @RequestParam(required = false) int offset,
+    public ResponseEntity<Object> clients(@RequestParam(required = false, defaultValue = "20") int limit,
+                                          @RequestParam(required = false, defaultValue = "1") int offset,
                                           @RequestParam(required = false) UserTypeEnum type,
                                           @RequestParam(required = false) String city,
                                           @RequestParam(required = false) String name) {
@@ -58,7 +60,6 @@ public class UserController {
                 .city(city)
                 .name(name)
                 .build();
-
         Object list = userService.getClients(request);
         return new ResponseEntity<>(list, HttpStatus.OK);
     }

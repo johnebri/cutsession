@@ -19,7 +19,7 @@ public class JwtUtil {
 
     private String SECRET_KEY = "cutsessionS3cr3t3k3y";
 
-    private long jwtTokenDuration = 18000;
+    private long jwtTokenDuration = 604800000;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);

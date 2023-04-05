@@ -1,4 +1,4 @@
-package com.johnebri.cutsession.model;
+package com.johnebri.cutsession.model.enums;
 
 /**
  * @author John on 12/2/22

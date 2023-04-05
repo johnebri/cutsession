@@ -8,10 +8,13 @@ import com.johnebri.cutsession.dto.register.RegisterUserRequest;
 import com.johnebri.cutsession.dto.register.RegisterUserResponse;
 import com.johnebri.cutsession.dto.signin.SigninRequest;
 import com.johnebri.cutsession.dto.signin.SigninResponse;
+import com.johnebri.cutsession.exception.DuplicateResourceException;
+import com.johnebri.cutsession.exception.ResourceNotFoundException;
 import com.johnebri.cutsession.model.User;
-import com.johnebri.cutsession.model.UserTypeEnum;
+import com.johnebri.cutsession.model.enums.UserTypeEnum;
 import com.johnebri.cutsession.security.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -38,6 +42,9 @@ public class UserServiceImpl implements UserService {
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
 
+    @Value("${base-url}")
+    private String baseUrl;
+
     public UserServiceImpl(UserDao userDao, AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtUtil jwtUtil) {
         this.userDao = userDao;
         this.authenticationManager = authenticationManager;
@@ -47,6 +54,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public RegisterUserResponse register(RegisterUserRequest request) {
+
+        // check if name already exists
+        if(userDao.findByName(request.getName()).isPresent()) {
+            throw new DuplicateResourceException("Name already exists");
+        }
+
+        // check if email already exists
+        if(userDao.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("Email already exists");
+        }
+
+        // check if username already exists
+        if(userDao.findByUsername(request.getUsername()).isPresent()) {
+            throw new DuplicateResourceException("Username already exists");
+        }
+
+        // check if phone number already exists
+        if(userDao.findByPhone(request.getPhoneNumber()).isPresent()) {
+            throw new DuplicateResourceException("Phone number already exists");
+        }
 
         int strength = 10;
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(strength, new SecureRandom());
@@ -77,6 +104,29 @@ public class UserServiceImpl implements UserService {
     @Override
     public RegisterMerchantResponse registerMerchant(RegisterMerchantRequest request) {
 
+        // check if name already exists
+        if(userDao.findByName(request.getName()).isPresent()) {
+            throw new DuplicateResourceException("Name already exists");
+        }
+
+        // check if email already exists
+        if(userDao.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("Email already exists");
+        }
+
+        // check if username already exists
+        if(userDao.findByUsername(request.getUsername()).isPresent()) {
+            throw new DuplicateResourceException("Username already exists");
+        }
+
+        // check if phone number already exists
+        if(userDao.findByPhone(request.getPhoneNumber()).isPresent()) {
+            throw new DuplicateResourceException("Phone number already exists");
+        }
+
+        int strength = 10;
+        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(strength, new SecureRandom());
+
         // generate merchant id
         String merchantId = UUID.randomUUID().toString();
 
@@ -86,7 +136,7 @@ public class UserServiceImpl implements UserService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .username(request.getUsername())
-                .password(request.getPassword())
+                .password(bCryptPasswordEncoder.encode(request.getPassword()))
                 .city(request.getCityOfOperation())
                 .phoneNumber(request.getPhoneNumber())
                 .type(UserTypeEnum.MERCHANT)
@@ -116,23 +166,85 @@ public class UserServiceImpl implements UserService {
 
         final String jwt = jwtUtil.generateToken(userDetails);
 
-        SigninResponse response = SigninResponse.builder()
-                .token(jwt)
-                .build();
+        // get the user details
+        Optional<User> optionalUser = userDao.findByUsername(request.getUsername());
+
+        // check accessType mismatch
+        if(!request.getAccessType().toString().equalsIgnoreCase(optionalUser.get().getType().toString())) {
+            throw new ResourceNotFoundException("Access type mismatch");
+        }
+
+        SigninResponse response = new SigninResponse();
+
+        if("USER".equalsIgnoreCase(request.getAccessType().toString())) {
+            // user signin
+            response.setToken(jwt);
+            response.setUserId(optionalUser.get().getId());
+        } else {
+            // merchant signin
+            response.setToken(jwt);
+            response.setMerchantId(optionalUser.get().getId());
+        }
+
         return response;
-
-
     }
 
     @Override
     public Object getClients(GetClientRequest request) {
 
-        List<User> users = userDao.getClients(request);
+        GetClientsDaoResponse users = userDao.getClients(request);
+        int filteredCount = users.getFilterdResponse().size();
+        int totalCount = users.getTotalResponse().size();
 
-        if(request.getType().equals(UserTypeEnum.USER.toString())) {
+        int limit = request.getLimit();
+        int offset = request.getOffset();
+
+        double pages = Math.ceil((float)totalCount/limit);
+
+        int previousOffset = offset - limit;
+        int nextOffset = offset + limit;
+
+        String next = null;
+        String previous = null;
+
+        // check for params
+        String type = request.getType().toString();
+
+        String cityParamValue = "";
+        if(request.getCity() != null) {
+            cityParamValue = "&city="+request.getCity();
+        } else {
+            cityParamValue = "";
+        }
+
+        String nameParamValue = "";
+        if(request.getName() != null) {
+            nameParamValue = "&name="+request.getName();
+        } else {
+            nameParamValue = "";
+        }
+
+        boolean prevBool = true;
+        boolean nextBool = true;
+        if(nextOffset >= totalCount){
+            nextBool = false;
+        }
+
+        if(previousOffset < 0) {
+            prevBool = false;
+        }
+
+        if(nextBool == true)
+            next = baseUrl + "/clients?limit="+limit+"&offset="+nextOffset+"&type="+type+cityParamValue+nameParamValue;
+
+        if(prevBool == true)
+            previous = baseUrl + "/clients?limit="+limit+"&offset="+previousOffset+"&type="+type+cityParamValue+nameParamValue;
+
+
+        if (UserTypeEnum.USER.toString().equalsIgnoreCase(request.getType().toString())) {
             // users
             List<UserResponse> userResponseList = new ArrayList<>();
-            for(User u : users) {
+            for (User u : users.getFilterdResponse()) {
                 UserResponse userResponse = UserResponse.builder()
                         .userId(u.getId())
                         .name(u.getName())
@@ -142,13 +254,18 @@ public class UserServiceImpl implements UserService {
                         .build();
                 userResponseList.add(userResponse);
             }
-            return UserListResponse.builder()
-                    .data(userResponseList)
-                    .build();
-        } else {
+
+            UserListResponse resp = new UserListResponse();
+            resp.setCount(totalCount);
+            resp.setNext(next);
+            resp.setPrevious(previous);
+            resp.setData(userResponseList);
+            return resp;
+
+        } else if (UserTypeEnum.MERCHANT.toString().equalsIgnoreCase(request.getType().toString())) {
             // merchant
             List<MerchantResponse> merchantResponseList = new ArrayList<>();
-            for(User u : users) {
+            for (User u : users.getFilterdResponse()) {
                 MerchantResponse userResponse = MerchantResponse.builder()
                         .merchantId(u.getId())
                         .name(u.getName())
@@ -158,10 +275,16 @@ public class UserServiceImpl implements UserService {
                         .build();
                 merchantResponseList.add(userResponse);
             }
-            return MerchantListResponse.builder()
-                    .data(merchantResponseList)
-                    .build();
-        }
-    }
 
+            MerchantListResponse resp = new MerchantListResponse();
+            resp.setCount(totalCount);
+            resp.setData(merchantResponseList);
+            return resp;
+
+
+        } else {
+            return "No data";
+        }
+
+    }
 }
